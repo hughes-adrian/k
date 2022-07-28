@@ -1,12 +1,17 @@
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Optional;
 import java.util.stream.IntStream;
 
 public class k {
 
     //private static Logger logger;
+
+    private final Environment environment = new Environment();
 
     public static void main(String[] args) throws IOException {
         //logger = Logger.getLogger(k.class.getName());
@@ -33,6 +38,14 @@ public class k {
         try {
             List<Exp> expressions = bexpr(tokenizer);
             expressions.forEach(System.out::println);
+            AstPrinter ap = new AstPrinter();
+            AstCodeGen astCodeGen = new AstCodeGen(environment);
+            expressions.forEach(i -> System.out.println(ap.print(i)));
+            try {
+                expressions.forEach(i -> System.out.println(astCodeGen.interpret(i)));
+            } catch (RuntimeException e) {
+                System.out.println(e.getMessage());
+            }
         } catch (TokenError error) {
             //logger.log(Level.INFO, error.toString());
             //System.out.println(error);
@@ -81,28 +94,29 @@ public class k {
             if (isColon(tokenizer)) {
                 tokenizer.consume(":");
             }
-            if (tokenizer.tok == Token.ADVERB){
+            /*if (tokenizer.tok == Token.ADVERB){
                 // f/ 1 2 3
-                Adverb exp = adverb(tokenizer,opl,null);
+                Adverb exp = adverb(tokenizer,opl);
                 while (tokenizer.tok == Token.ADVERB){
-                    exp = adverb(tokenizer,exp,null);
+                    exp = adverb(tokenizer,exp);
                 }
+                exp.left = new MonadExp(opl,null);
                 return exp;
-            }
-            if (tokenizer.tok == Token.OP && last == Token.SYMBOL){
+            }*/
+            if ((tokenizer.tok == Token.OP || tokenizer.tok == Token.SYMBOL) && last == Token.SYMBOL){
                 if (pv(tokenizer)){
                     Exp op = verb(tokenizer);
                     if (tokenizer.tok == Token.COLON) {
                         tokenizer.consume(":");
                         if (tokenizer.tok == Token.ADVERB){
                             // TODO check for adverb trains
-                            return new MonadExp(opl,adverb(tokenizer,op,null));
+                            return new MonadExp(opl,adverb(tokenizer,op));
                         } else return new MonadExp(opl,new MonadExp(op,expr(tokenizer)));
                     }
                     if (tokenizer.tok == Token.ADVERB){
-                        Adverb exp = adverb(tokenizer,op,null);
+                        Adverb exp = adverb(tokenizer,op);
                         while (tokenizer.tok == Token.ADVERB){
-                            exp = adverb(tokenizer,exp,null);
+                            exp = adverb(tokenizer,exp);
                         }
                         exp.left = new MonadExp(opl,null);
                         return exp;
@@ -117,6 +131,10 @@ public class k {
             if (tokenizer.tok == Token.COLON) {
                 throw new TokenError("assignment error");
             }
+            if (!(n instanceof NounExp)) {
+                if (tokenizer.tok == Token.OP) return new DyadExp(verb(tokenizer),n,expr(tokenizer));
+                else return new MonadExp(n,expr(tokenizer));
+            }
             if (pv(tokenizer)){
                 if (tokenizer.isEol()) throw new TokenError("'syntax error");
                 Exp op = verb(tokenizer);
@@ -124,13 +142,13 @@ public class k {
                     tokenizer.consume(":");
                     if (tokenizer.tok == Token.ADVERB){
                         // TODO check for adverb trains
-                        return new MonadExp(n,adverb(tokenizer,op,null));
+                        return new MonadExp(n,adverb(tokenizer,op));
                     } else return new MonadExp(n,new MonadExp(op,expr(tokenizer)));
                 }
                 if (tokenizer.tok == Token.ADVERB){
-                    Adverb exp = adverb(tokenizer,op,null);
+                    Adverb exp = adverb(tokenizer,op);
                     while (tokenizer.tok == Token.ADVERB){
-                        exp = adverb(tokenizer,exp,null);
+                        exp = adverb(tokenizer,exp);
                     }
                     exp.left = n; // Patch the AST
                     return exp;
@@ -179,16 +197,16 @@ public class k {
         return exp;
     }
 
-    private Adverb adverb(Tokenizer tokenizer, Exp op, Exp lhs) throws TokenError {
+    private Adverb adverb(Tokenizer tokenizer, Exp op) throws TokenError {
         String c = tokenizer.op;
         tokenizer.consume();
         return switch(c){
-            case "/" -> new OverExp(op,lhs,expr(tokenizer));
-            case "\\" -> new ScanExp(op,lhs,expr(tokenizer));
-            case "'" -> new EachExp(op,lhs,expr(tokenizer));
-            case "/:" -> new EachRightExp(op,lhs,expr(tokenizer));
-            case "\\:" -> new EachLeftExp(op,lhs,expr(tokenizer));
-            case "':" -> new EachPairExp(op,lhs,expr(tokenizer));
+            case "/" -> new OverExp(op, null,expr(tokenizer));
+            case "\\" -> new ScanExp(op, null,expr(tokenizer));
+            case "'" -> new EachExp(op, null,expr(tokenizer));
+            case "/:" -> new EachRightExp(op, null,expr(tokenizer));
+            case "\\:" -> new EachLeftExp(op, null,expr(tokenizer));
+            case "':" -> new EachPairExp(op, null,expr(tokenizer));
             default -> null;
         };
     }

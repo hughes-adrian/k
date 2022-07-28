@@ -1,11 +1,30 @@
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-
-abstract class Exp {
+sealed abstract class Exp {
+    interface Visitor<R> {
+        R visitDyadExp(DyadExp expr);
+        R visitMonadExp(MonadExp expr);
+        R visitNounExp(NounExp expr);
+        R visitAdverb(Adverb expr);
+        R visitAssignExp(AssignExp expr);
+        R visitEachExp(EachExp expr);
+        R visitEachLeftExp(EachLeftExp expr);
+        R visitEachPairExp(EachPairExp expr);
+        R visitEachRightExp(EachRightExp expr);
+        R visitFuncCallExp(FuncCallExp expr);
+        R visitFuncExp(FuncExp expr);
+        R visitListExp(ListExp expr);
+        R visitOverExp(OverExp expr);
+        R visitScanExp(ScanExp expr);
+        R visitSymExp(SymExp expr);
+        R visitSymOpExp(SymOpExp expr);
+        R visitOpExp(OpExp expr);
+    }
+    abstract <R> R accept(Visitor<R> visitor);
 }
 
-class MonadExp extends Exp {
+final class MonadExp extends Exp {
     public Exp op;
     public Exp exp;
     public MonadExp(Exp op, Exp exp){
@@ -16,9 +35,14 @@ class MonadExp extends Exp {
     public String toString(){
         return "(m"+op+" "+exp+")";
     }
+
+    @Override
+    <R> R accept(Visitor<R> visitor) {
+        return visitor.visitMonadExp(this);
+    }
 }
 
-class DyadExp extends Exp {
+final class DyadExp extends Exp {
     public Exp op;
     public Exp left;
     public Exp right;
@@ -31,15 +55,23 @@ class DyadExp extends Exp {
     public String toString(){
         return "(d"+op+" "+left+" "+right+")";
     }
+    @Override
+    <R> R accept(Visitor<R> visitor) {
+        return visitor.visitDyadExp(this);
+    }
 }
 
-class Adverb extends Exp {
+sealed class Adverb extends Exp {
     public Exp func;
     public Exp left;
     public Exp right;
+    @Override
+    <R> R accept(Visitor<R> visitor) {
+        return visitor.visitAdverb(this);
+    }
 }
 
-class OverExp extends Adverb {
+final class OverExp extends Adverb {
     public OverExp(Exp f,Exp l, Exp r){
         this.func = f;
         this.left = l;
@@ -49,9 +81,13 @@ class OverExp extends Adverb {
     public String toString(){
         return "(/:"+func+" "+left+" "+right+")";
     }
+    @Override
+    <R> R accept(Visitor<R> visitor) {
+        return visitor.visitOverExp(this);
+    }
 }
 
-class ScanExp extends Adverb {
+final class ScanExp extends Adverb {
     public ScanExp(Exp f, Exp l, Exp r){
         this.func = f;
         this.left = l;
@@ -61,9 +97,13 @@ class ScanExp extends Adverb {
     public String toString(){
         return "(\\:"+func+" "+left+" "+right+")";
     }
+    @Override
+    <R> R accept(Visitor<R> visitor) {
+        return visitor.visitScanExp(this);
+    }
 }
 
-class EachExp extends Adverb {
+final class EachExp extends Adverb {
     public EachExp(Exp f, Exp l, Exp r){
         this.func = f;
         this.left = l;
@@ -73,9 +113,13 @@ class EachExp extends Adverb {
     public String toString(){
         return "(':"+func+" "+left+" "+right+")";
     }
+    @Override
+    <R> R accept(Visitor<R> visitor) {
+        return visitor.visitEachExp(this);
+    }
 }
 
-class EachRightExp extends Adverb {
+final class EachRightExp extends Adverb {
     public EachRightExp(Exp f, Exp l, Exp r){
         this.func = f;
         this.left = l;
@@ -85,9 +129,13 @@ class EachRightExp extends Adverb {
     public String toString(){
         return "(/::"+func+" "+left+" "+right+")";
     }
+    @Override
+    <R> R accept(Visitor<R> visitor) {
+        return visitor.visitEachRightExp(this);
+    }
 }
 
-class EachLeftExp extends Adverb {
+final class EachLeftExp extends Adverb {
     public EachLeftExp(Exp f, Exp l, Exp r){
         this.func = f;
         this.left = l;
@@ -97,9 +145,13 @@ class EachLeftExp extends Adverb {
     public String toString(){
         return "(\\::"+func+" "+left+" "+right+")";
     }
+    @Override
+    <R> R accept(Visitor<R> visitor) {
+        return visitor.visitEachLeftExp(this);
+    }
 }
 
-class EachPairExp extends Adverb {
+final class EachPairExp extends Adverb {
     public EachPairExp(Exp f, Exp l, Exp r){
         this.func = f;
         this.left = l;
@@ -109,9 +161,13 @@ class EachPairExp extends Adverb {
     public String toString(){
         return "('::" +func+" "+left+" "+right+")";
     }
+    @Override
+    <R> R accept(Visitor<R> visitor) {
+        return visitor.visitEachPairExp(this);
+    }
 }
 
-class AssignExp extends Exp {
+final class AssignExp extends Exp {
     public String name;
     public Exp exp;
     public AssignExp(String name, Exp e){
@@ -122,9 +178,13 @@ class AssignExp extends Exp {
     public String toString(){
         return "(=:"+name+" "+exp+")";
     }
+    @Override
+    <R> R accept(Visitor<R> visitor) {
+        return visitor.visitAssignExp(this);
+    }
 }
 
-class SymExp extends Exp {
+final class SymExp extends Exp {
     public String name;
     public SymExp(String s){
         name = s;
@@ -132,9 +192,13 @@ class SymExp extends Exp {
     public String toString(){
         return "(Sym:"+name+")";
     }
+    @Override
+    <R> R accept(Visitor<R> visitor) {
+        return visitor.visitSymExp(this);
+    }
 }
 
-class NounExp extends Exp {
+final class NounExp extends Exp {
     public ArrayList<Double> val;
     public double single;
     public boolean scalar;
@@ -149,9 +213,13 @@ class NounExp extends Exp {
     public String toString(){
         return "(obj:" + Objects.requireNonNullElseGet(val, () -> single) + ")";
     }
+    @Override
+    <R> R accept(Visitor<R> visitor) {
+        return visitor.visitNounExp(this);
+    }
 }
 
-class ListExp extends Exp {
+final class ListExp extends Exp {
     public ArrayList<Exp> val;
     public ListExp(ArrayList<Exp> n){
         val = n;
@@ -159,8 +227,12 @@ class ListExp extends Exp {
     public String toString(){
         return "(list:" + val + ")";
     }
+    @Override
+    <R> R accept(Visitor<R> visitor) {
+        return visitor.visitListExp(this);
+    }
 }
-class OpExp extends Exp {
+final class OpExp extends Exp {
     public String name;
     public OpExp(String s){
         name = s;
@@ -168,9 +240,13 @@ class OpExp extends Exp {
     public String toString(){
         return "(fn:"+name+")";
     }
+    @Override
+    <R> R accept(Visitor<R> visitor) {
+        return visitor.visitOpExp(this);
+    }
 }
 
-class SymOpExp extends Exp {
+final class SymOpExp extends Exp {
     public String name;
     public SymOpExp(String s){
         name = s;
@@ -178,9 +254,13 @@ class SymOpExp extends Exp {
     public String toString(){
         return "(sfn:"+name+")";
     }
+    @Override
+    <R> R accept(Visitor<R> visitor) {
+        return visitor.visitSymOpExp(this);
+    }
 }
 
-class FuncExp extends Exp {
+final class FuncExp extends Exp {
     public List<Exp> body;
     String source;
     public FuncExp(List<Exp> b, String s){
@@ -190,8 +270,12 @@ class FuncExp extends Exp {
     public String toString(){
         return "(afn:{"+body+"})";
     }
+    @Override
+    <R> R accept(Visitor<R> visitor) {
+        return visitor.visitFuncExp(this);
+    }
 }
-class FuncCallExp extends Exp {
+final class FuncCallExp extends Exp {
     public Exp body;
     public List<Exp> args;
     String source;
@@ -201,5 +285,9 @@ class FuncCallExp extends Exp {
     }
     public String toString(){
         return "(fncall:"+body+"," + args +")";
+    }
+    @Override
+    <R> R accept(Visitor<R> visitor) {
+        return visitor.visitFuncCallExp(this);
     }
 }
