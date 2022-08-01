@@ -4,7 +4,7 @@ public class Tokenizer {
     private final String code;
     private int p;
     private final int len;
-    public double val;
+    public int val;
     public Token tok;
     public String symbol;
     public String op;
@@ -35,7 +35,7 @@ public class Tokenizer {
         if (p==len)
             return Token.EOL;
         if (p<len && Character.isDigit(code.charAt(p))){
-            double v = 0.0;
+            int v = 0;
             for (; p<len; p++){
                 char c = code.charAt(p);
                 if (Character.isDigit(c)){

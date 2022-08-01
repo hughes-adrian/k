@@ -4,6 +4,7 @@ import java.util.List;
 public class AstCodeGen implements Exp.Visitor<Object> {
 
     private final Environment environment;
+    public StringBuilder code = new StringBuilder();
 
     public AstCodeGen(Environment environment){
         this.environment = environment;
@@ -19,7 +20,10 @@ public class AstCodeGen implements Exp.Visitor<Object> {
 
             }
             case OpExp s -> {
-                if ( s.name.compareTo("+") == 0) res = (double)expr.left.accept(this) + (double)expr.right.accept(this);
+                if ( s.name.compareTo("+") == 0){
+                    res = (double)expr.left.accept(this) + (double)expr.right.accept(this);
+                    code.append("\niadd");
+                }
             }
             default -> throw new IllegalStateException("Unexpected value: " + expr.op);
         }
@@ -46,9 +50,11 @@ public class AstCodeGen implements Exp.Visitor<Object> {
 
     @Override
     public Object visitNounExp(NounExp expr) {
-        return expr.scalar ?
-                expr.single :
-                expr.val.get(0);
+        A v = expr.getValue();
+        code.append("\nbipush ").append(v.single);
+        return v.scalar ?
+                v.single :
+                v.val.get(0);
     }
 
     @Override
@@ -58,7 +64,7 @@ public class AstCodeGen implements Exp.Visitor<Object> {
 
     @Override
     public Object visitAssignExp(AssignExp expr) {
-        Object result = expr.exp.accept(this);
+        A result = (A)expr.exp.accept(this);
         environment.assign(expr.name,result);
         return result;
     }

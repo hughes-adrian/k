@@ -22,6 +22,7 @@ sealed abstract class Exp {
         R visitOpExp(OpExp expr);
     }
     abstract <R> R accept(Visitor<R> visitor);
+    Type type;
 }
 
 final class MonadExp extends Exp {
@@ -30,10 +31,11 @@ final class MonadExp extends Exp {
     public MonadExp(Exp op, Exp exp){
         this.op = op;
         this.exp = exp;
+        this.type = exp.type;
     }
     @Override
     public String toString(){
-        return "(m"+op+" "+exp+")";
+        return "(m"+op+" "+exp+", type: " + type + ")";
     }
 
     @Override
@@ -50,10 +52,15 @@ final class DyadExp extends Exp {
         this.op = op;
         this.left = l;
         this.right = r;
+        if (l.type == Type.ILIST || r.type == Type.ILIST){
+            this.type = Type.ILIST;
+        } else {
+           this.type = Type.INT;
+        }
     }
     @Override
     public String toString(){
-        return "(d"+op+" "+left+" "+right+")";
+        return "(d"+op+" "+left+" "+right+", type: " + type + ")";
     }
     @Override
     <R> R accept(Visitor<R> visitor) {
@@ -173,6 +180,7 @@ final class AssignExp extends Exp {
     public AssignExp(String name, Exp e){
         this.name = name;
         this.exp = e;
+        this.type = e.type;
     }
     @Override
     public String toString(){
@@ -199,19 +207,32 @@ final class SymExp extends Exp {
 }
 
 final class NounExp extends Exp {
-    public ArrayList<Double> val;
-    public double single;
-    public boolean scalar;
-    public NounExp(ArrayList<Double> n){
-        val = n;
-        scalar = false;
+    A value;
+    public NounExp(ArrayList<Integer> n){
+        value = new A(n);
+        this.type = Type.ILIST;
     }
-    public NounExp(double d){
-        single = d;
-        scalar = true;
+    public NounExp(int d){
+        value = new A(d);
+        this.type = Type.INT;
     }
+
+    public NounExp(Type type){
+        this.type = type;
+    }
+
+    A getValue(){
+        return value;
+    }
+
     public String toString(){
-        return "(obj:" + Objects.requireNonNullElseGet(val, () -> single) + ")";
+        if (value != null) {
+            return "(obj:" + Objects.requireNonNullElseGet(value.val, () -> value.single)
+                    + ", type: " + value.type + ")";
+        } else {
+            return "(obj: null, type: " + type + ")";
+
+        }
     }
     @Override
     <R> R accept(Visitor<R> visitor) {

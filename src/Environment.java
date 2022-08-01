@@ -4,7 +4,7 @@ import java.util.Map;
 public class Environment {
 
     final Environment enclosing;
-    private final Map<String,Object> values = new HashMap<>();
+    private final Map<String,A> values = new HashMap<>();
 
     public Environment(Environment enclosing) {
         this.enclosing = enclosing;
@@ -13,7 +13,7 @@ public class Environment {
         this.enclosing = null;
     }
 
-    Object get(String name){
+    A get(String name){
         if (values.containsKey(name)){
             return values.get(name);
         }
@@ -22,7 +22,7 @@ public class Environment {
         throw new RuntimeException("Undefined variable: '"+name+"'");
     }
 
-    void assign(String name, Object value){
+    void assign(String name, A value){
         if (values.containsKey(name)){
             values.replace(name,value);
         } else {

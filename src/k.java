@@ -1,10 +1,8 @@
+import javax.sound.midi.Soundbank;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.util.ArrayList;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.IntStream;
 
 public class k {
@@ -12,6 +10,7 @@ public class k {
     //private static Logger logger;
 
     private final Environment environment = new Environment();
+    private final Map<String,Type> symbol = new HashMap<>();
 
     public static void main(String[] args) throws IOException {
         //logger = Logger.getLogger(k.class.getName());
@@ -39,10 +38,10 @@ public class k {
             List<Exp> expressions = bexpr(tokenizer);
             expressions.forEach(System.out::println);
             AstPrinter ap = new AstPrinter();
-            AstCodeGen astCodeGen = new AstCodeGen(environment);
+            AstInterpret astInterpret = new AstInterpret(environment);
             expressions.forEach(i -> System.out.println(ap.print(i)));
             try {
-                expressions.forEach(i -> System.out.println(astCodeGen.interpret(i)));
+                expressions.forEach(i -> System.out.println(astInterpret.interpret(i)));
             } catch (RuntimeException e) {
                 System.out.println(e.getMessage());
             }
@@ -125,7 +124,12 @@ public class k {
                 }
                 return opl;
             }
-            return new MonadExp(opl,expr(tokenizer));
+            Exp e = expr(tokenizer);
+            if (e == null) {
+                //System.out.printf("symbol found '%s'; type: %s\n",opl,symbol.get(((SymOpExp)opl).name));
+                e = new NounExp(symbol.get(((SymOpExp)opl).name));
+            }
+            return new MonadExp(opl,e);
         } else if (pn(tokenizer)){ // Dyadic branch ============================
             Exp n = noun(tokenizer);
             if (tokenizer.tok == Token.COLON) {
@@ -169,7 +173,9 @@ public class k {
 
     private AssignExp assign(String name, Tokenizer tokenizer) throws TokenError {
         tokenizer.consume(":");
-        return new AssignExp(name,expr(tokenizer));
+        Exp e = expr(tokenizer);
+        symbol.put(name,e.type);
+        return new AssignExp(name,e);
     }
 
     private Exp verb(Tokenizer tokenizer) throws TokenError {
@@ -240,7 +246,7 @@ public class k {
     }
 
     private NounExp num(Tokenizer tokenizer) {
-        ArrayList<Double> n = new ArrayList<>();
+        ArrayList<Integer> n = new ArrayList<>();
         n.add(tokenizer.val);
         tokenizer.next();
         while (tokenizer.tok == Token.NUM){

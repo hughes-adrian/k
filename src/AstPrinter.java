@@ -17,9 +17,10 @@ public class AstPrinter implements Exp.Visitor<String> {
 
     @Override
     public String visitNounExp(NounExp expr) {
-        return expr.scalar ?
-                parens("Obj",expr.single) :
-                parens("Obj", expr.val);
+        A v = expr.getValue();
+        return v == null ? "(Obj null)" : v.scalar ?
+                parens("Obj",v.single) :
+                parens("Obj",v.val);
     }
 
     @Override
