@@ -1,3 +1,4 @@
+import java.util.Collections;
 import java.util.List;
 
 public class AstPrinter implements Exp.Visitor<String> {
@@ -19,8 +20,8 @@ public class AstPrinter implements Exp.Visitor<String> {
     public String visitNounExp(NounExp expr) {
         A v = expr.getValue();
         return v == null ? "(Obj null)" : v.scalar ?
-                parens("Obj",v.single) :
-                parens("Obj",v.val);
+                parens("",v.isingle) :
+                parens("", Collections.singletonList(v.ilist));
     }
 
     @Override
@@ -35,22 +36,22 @@ public class AstPrinter implements Exp.Visitor<String> {
 
     @Override
     public String visitEachExp(EachExp expr) {
-        return null;
+        return parens(String.format("%s'",expr.func.accept(this)),expr.left,expr.right);
     }
 
     @Override
     public String visitEachLeftExp(EachLeftExp expr) {
-        return null;
+        return parens(String.format("%s\\:",expr.func.accept(this)),expr.left,expr.right);
     }
 
     @Override
     public String visitEachPairExp(EachPairExp expr) {
-        return null;
+        return parens(String.format("%s':",expr.func.accept(this)),expr.left,expr.right);
     }
 
     @Override
     public String visitEachRightExp(EachRightExp expr) {
-        return null;
+        return parens(String.format("%s/:",expr.func.accept(this)),expr.left,expr.right);
     }
 
     @Override
@@ -60,27 +61,36 @@ public class AstPrinter implements Exp.Visitor<String> {
 
     @Override
     public String visitFuncExp(FuncExp expr) {
-        return null;
+        return "{"+expr.source+"}";
     }
 
     @Override
     public String visitListExp(ListExp expr) {
-        return null;
+        StringBuilder sb = new StringBuilder();
+        sb.append("(list ");
+        for (Exp exp : expr.val){
+            if (exp != null) sb.append(exp.accept(this));
+            else sb.append("null");
+            sb.append(" ");
+        }
+        int last = sb.lastIndexOf(" ");
+        sb.deleteCharAt(last);
+        sb.append(")");
+        return sb.toString();
     }
 
     @Override
     public String visitOverExp(OverExp expr) {
-        return null;
+        return parens(String.format("%s/",expr.func.accept(this)),expr.left,expr.right);
     }
 
     @Override
     public String visitScanExp(ScanExp expr) {
-        return null;
+        return parens(String.format("%s\\",expr.func.accept(this)),expr.left,expr.right);
     }
 
     @Override
     public String visitSymExp(SymExp expr) {
-        System.out.println("sym");
         return expr.name;
     }
 
@@ -109,7 +119,7 @@ public class AstPrinter implements Exp.Visitor<String> {
     private String parens(String name, List val){
         StringBuilder sb = new StringBuilder();
         sb.append("(").append(name);
-        sb.append(" ");
+        //sb.append(" ");
         sb.append(val);
         sb.append(")");
         return sb.toString();
@@ -117,7 +127,7 @@ public class AstPrinter implements Exp.Visitor<String> {
     private String parens(String name, double val){
         StringBuilder sb = new StringBuilder();
         sb.append("(").append(name);
-        sb.append(" ");
+        //sb.append(" ");
         sb.append(val);
         sb.append(")");
         return sb.toString();

@@ -1,5 +1,7 @@
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Function;
 
 public class AstInterpret implements Exp.Visitor<A> {
 
@@ -14,45 +16,61 @@ public class AstInterpret implements Exp.Visitor<A> {
     @Override
     public A visitDyadExp(DyadExp expr) {
         A res = null;
-        A l = expr.left.accept(this);
         A r = expr.right.accept(this);
+        A l = expr.left.accept(this);
+        Type tl = l.type;
+        Type tr = r.type;
         switch (expr.op){
             case SymOpExp s -> {
 
             }
             case OpExp s -> {
-                // TODO fix this for deeper trees
                 if ( s.name.compareTo("+") == 0){
-                    if (l.scalar && r.scalar) return new A(l.single+r.single);
-                    else if (l.scalar) {
-                        ArrayList<Integer> array = new ArrayList<>(r.val.size());
-                        for (int i=0; i<r.val.size(); i++){
-                            array.add(r.val.get(i)+l.single);
+                    if (tl == Type.INT && tr == Type.INT) {
+                        return new A(l.isingle + r.isingle);
+                    } else if (tl == Type.ILIST && tr == Type.INT) {
+                        ArrayList<Integer> array = new ArrayList<>(l.ilist.length);
+                        for (int i=0; i<l.ilist.length; i++){
+                            array.add(l.ilist[i]+r.isingle);
                         }
                         return new A(array);
-                    } else if (r.scalar) {
-                        ArrayList<Integer> array = new ArrayList<>(l.val.size());
-                        for (int i=0; i<l.val.size(); i++){
-                            array.add(l.val.get(i)+r.single);
+                    } else if (tl == Type.INT && tr == Type.ILIST) {
+                        ArrayList<Integer> array = new ArrayList<>(r.ilist.length);
+                        for (int i=0; i<r.ilist.length; i++){
+                            array.add(l.isingle+r.ilist[i]);
+                        }
+                        return new A(array);
+                    } else if (tl == Type.ILIST && tr == Type.ILIST) {
+                        int n = Math.max(l.ilist.length,r.ilist.length);
+                        ArrayList<Integer> array = new ArrayList<>(n);
+                        for (int i=0; i<n; i++){
+                            array.add(l.ilist[i]+r.ilist[i]);
                         }
                         return new A(array);
                     }
                 }
                 if ( s.name.compareTo("-") == 0){
-                    if (l.scalar && r.scalar) return new A(l.single-r.single);
-                    else if (l.scalar) {
-                        ArrayList<Integer> array = new ArrayList<>(r.val.size());
-                        for (int i=0; i<r.val.size(); i++){
-                            array.add(l.single-r.val.get(i));
-                        }
-                        return new A(array);
-                    } else if (r.scalar) {
-                        ArrayList<Integer> array = new ArrayList<>(l.val.size());
-                        for (int i=0; i<l.val.size(); i++){
-                            array.add(l.val.get(i)-r.single);
-                        }
-                        return new A(array);
-                    }
+                    //if (tl == Type.INT && tr == Type.INT) {
+                    //    return new A(l.single - r.single);
+                    //} else if (tl == Type.ILIST && tr == Type.INT) {
+                    //    ArrayList<Integer> array = new ArrayList<>(l.val.size());
+                    //    for (int i=0; i<l.val.size(); i++){
+                    //        array.add(l.val.get(i)-r.single);
+                    //    }
+                    //    return new A(array);
+                    //} else if (tl == Type.INT && tr == Type.ILIST) {
+                    //    ArrayList<Integer> array = new ArrayList<>(r.val.size());
+                    //    for (int i=0; i<r.val.size(); i++){
+                    //        array.add(l.single-r.val.get(i));
+                    //    }
+                    //    return new A(array);
+                    //} else if (tl == Type.ILIST && tr == Type.ILIST) {
+                    //    ArrayList<Integer> array = new ArrayList<>(r.val.size());
+                    //    for (int i=0; i<r.val.size(); i++){
+                    //        array.add(l.val.get(i)-r.val.get(i));
+                    //    }
+                    //    return new A(array);
+                    //}
                 }
             }
             default -> throw new IllegalStateException("Unexpected value: " + expr.op);
@@ -66,13 +84,20 @@ public class AstInterpret implements Exp.Visitor<A> {
         A res = null;
         switch (expr.op){
             case SymOpExp s -> {
-                System.out.println(expr.exp.getClass());
+                A r = expr.exp.accept(this);
                 switch (expr.exp){
                     case NounExp n -> {
                         if (n.value == null) res = environment.get(s.name);
-                        //else res = environment.get(s.name);
+                        else {
+                            A fn = environment.get(s.name);
+                            ArrayList<Integer> array = new ArrayList<>(n.value.ilist.length);
+                            for (int i=0; i<n.value.ilist.length; i++){
+                                array.add(fn.ilist[i]);
+                            }
+                            res = new A(array);
+                        }
                     }
-                    default -> res = expr.exp.accept(this);
+                    default -> res = r;
                 }
                 //if (expr.exp == null) {
                 //   res = expr.op.accept(this);
@@ -80,9 +105,37 @@ public class AstInterpret implements Exp.Visitor<A> {
                 //else res = expr.exp.accept(this);
             }
             case OpExp s -> {
-                if ( s.name.compareTo("+") == 0){
-                    res = expr.exp.accept(this);
-                }
+                A r = expr.exp.accept(this);
+                //if (s.name.compareTo("!") == 0) {
+                //    if (r.type == Type.INT) {
+                //        ArrayList<Integer> array = new ArrayList<>(r.single);
+                //        for (int i = 0; i < r.single; i++) {
+                //            array.add(i);
+                //        }
+                //        res = new A(array);
+                //    } else if (r.type == Type.ILIST) {
+                //        ArrayList<Integer> array = new ArrayList<>(r.val.get(0));
+                //        for (int i = 0; i < r.val.get(0); i++) {
+                //            array.add(i);
+                //        }
+                //        res = new A(array);
+                //    }
+                //} else if ( s.name.compareTo("+") == 0){
+                //    res = r;
+                //} else if (s.name.compareTo("-") == 0){
+                //    if (r.type == Type.INT){
+                //        res = new A(-r.single);
+                //    } else if (r.type == Type.ILIST){
+                //        ArrayList<Integer> array = new ArrayList<>(r.val.size());
+                //        for (int i=0; i<r.val.size(); i++){
+                //            array.add(-r.val.get(i));
+                //        }
+                //        res = new A(array);
+                //    }
+                //}
+            }
+            case FuncExp f -> {
+                return new A(f.body);
             }
             default -> res = expr.exp.accept(this);
         }
@@ -92,8 +145,6 @@ public class AstInterpret implements Exp.Visitor<A> {
     @Override
     public A visitNounExp(NounExp expr) {
         return expr.getValue();
-
-
     }
 
     @Override
@@ -167,6 +218,4 @@ public class AstInterpret implements Exp.Visitor<A> {
     public A visitOpExp(OpExp expr) {
         return null;
     }
-
-
 }

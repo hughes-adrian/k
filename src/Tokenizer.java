@@ -24,17 +24,32 @@ public class Tokenizer {
         return p;
     }
 
-    private void skipSpaces(){
+    public char peek() {
+        if (p<len)
+            return code.charAt(p);
+        else
+            return Character.LINE_SEPARATOR;
+    }
+
+    private int skipSpaces(){
+        int res = 0;
         while(p<len && Character.isSpaceChar(code.charAt(p))){
             p++;
+            res++;
         }
+        return res;
     }
 
     public Token lex() {
-        skipSpaces();
+        int skipped = skipSpaces();
         if (p==len)
             return Token.EOL;
-        if (p<len && Character.isDigit(code.charAt(p))){
+        if (p<len && (Character.isDigit(code.charAt(p))) || ( p < (len-1) &&
+                (((skipped > 0 || p==0) && code.charAt(p) == '-' && Character.isDigit(code.charAt(p+1)))))){
+            int mul = 1;
+            if (code.charAt(p) == '-') {
+                p++; mul = -1;
+            }
             int v = 0;
             for (; p<len; p++){
                 char c = code.charAt(p);
@@ -44,7 +59,7 @@ public class Tokenizer {
                      break;
                 }
             }
-            val = v;
+            val = mul*v;
             return Token.NUM;
         }
         if (p<len && Character.isAlphabetic(code.charAt(p))){
@@ -99,11 +114,13 @@ public class Tokenizer {
     public void consume(Token t) throws TokenError {
         if (t == tok) next();
         else throw new TokenError(String.format("expected %s, but got %s.",t,tok));
+        //next();
     }
 
     public void consume(String s) throws TokenError {
         if (s.compareTo(op)==0) next();
         else throw new TokenError(String.format("expected %s, but got %s.",s,tok));
+        //next();
     }
 
     public Optional<String > substringTo(char c){
